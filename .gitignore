@@ -1,0 +1,7 @@
+.idea
+.venv
+venv
+build
+dist
+SpotPRIS2.egg-info
+__pycache__

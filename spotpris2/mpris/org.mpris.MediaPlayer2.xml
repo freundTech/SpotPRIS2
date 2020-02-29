@@ -1,0 +1,12 @@
+<node>
+  <interface name="org.mpris.MediaPlayer2">
+    <method name="Raise"/>
+    <method name="Quit"/>
+    <property access="read" type="b" name="CanQuit"/>
+    <property access="read" type="b" name="CanRaise"/>
+    <property access="read" type="b" name="HasTrackList"/>
+    <property access="read" type="s" name="Identity"/>
+    <property access="read" type="as" name="SupportedUriSchemes"/>
+    <property access="read" type="as" name="SupportedMimeTypes"/>
+  </interface>
+</node>
