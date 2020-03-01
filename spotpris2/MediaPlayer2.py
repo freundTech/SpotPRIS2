@@ -66,7 +66,9 @@ class MediaPlayer2:
         self.spotify.pause_playback()
 
     def PlayPause(self):
-        if self.spotify.current_playback()["is_playing"]:
+        if self.current_playback is None:
+            return
+        if self.current_playback["is_playing"]:
             self.spotify.pause_playback()
         else:
             self.spotify.start_playback()
@@ -78,16 +80,19 @@ class MediaPlayer2:
         self.spotify.start_playback()
 
     def Seek(self, offset):
-        position = self.spotify.current_playback()["progress_ms"]
+        if self.current_playback is None:
+            return
+        position = self.current_playback["progress_ms"]
         new_position = max(position + us_to_ms(offset), 0)
         self.spotify.seek_track(new_position)
 
     def SetPosition(self, trackId, position):
-        state = self.spotify.current_playback()
-        if trackId != track_id_to_path(state["item"]["uri"]):
+        if self.current_playback is None or self.current_playback["item"] is None:
+            return
+        if trackId != track_id_to_path(self.current_playback["item"]["uri"]):
             print("Stale set position request. Ignoring.")
             return
-        if position < 0 or position > ms_to_us(state["item"]["duration_ms"]):
+        if position < 0 or position > ms_to_us(self.current_playback["item"]["duration_ms"]):
             return
         self.spotify.seek_track(us_to_ms(position))
 
@@ -116,17 +121,18 @@ class MediaPlayer2:
 
     @property
     def PlaybackStatus(self):
-        status = self.spotify.current_playback()
-        if status is None:
+        if self.current_playback is None:
             return "Stopped"
-        elif status["is_playing"]:
+        elif self.current_playback["is_playing"]:
             return "Playing"
         else:
             return "Paused"
 
     @property
     def LoopStatus(self):
-        status = self.spotify.current_playback()["repeat_state"]
+        if self.current_playback is None:
+            return "None"
+        status = self.current_playback["repeat_state"]
         if status == "off":
             return "None"
         elif status == "track":
@@ -161,7 +167,9 @@ class MediaPlayer2:
 
     @property
     def Shuffle(self):
-        return self.spotify.current_playback()["shuffle_state"]
+        if self.current_playback is None:
+            return False
+        return self.current_playback["shuffle_state"]
 
     @Shuffle.setter
     def Shuffle(self, shuffle):
@@ -169,11 +177,10 @@ class MediaPlayer2:
 
     @property
     def Metadata(self):
-        status = self.spotify.current_playback()
-        if status["item"] is None:
-            return {}
+        if self.current_playback is None or self.current_playback["item"] is None:
+            return {"mpris:trackid": Variant('o', "/org/mpris/MediaPlayer2/TrackList/NoTrack")}
 
-        item = status["item"]
+        item = self.current_playback["item"]
 
         metadata = {"mpris:trackid": Variant('o', track_id_to_path(item["uri"])),
                     "mpris:length": Variant('x', ms_to_us(item["duration_ms"])),
@@ -184,7 +191,7 @@ class MediaPlayer2:
                     "xesam:contentCreated": Variant('s', item["album"]["release_date"]),
                     "xesam:discNumber": Variant('i', item["disc_number"]),
                     "xesam:title": Variant('s', item["name"]),
-                    "xesam:trackNumer": Variant('i', item["track_number"]),
+                    "xesam:trackNumber": Variant('i', item["track_number"]),
                     "xesam:url": Variant('s', item["external_urls"]["spotify"]),
                     }
 
@@ -192,7 +199,9 @@ class MediaPlayer2:
 
     @property
     def Volume(self):
-        return percent_to_float(self.spotify.current_playback()["device"]["volume_percent"])
+        if self.current_playback is None:
+            return 1.0
+        return percent_to_float(self.current_playback["device"]["volume_percent"])
 
     @Volume.setter
     def Volume(self, volume):
@@ -201,7 +210,9 @@ class MediaPlayer2:
 
     @property
     def Position(self):
-        return ms_to_us(self.spotify.current_playback()["progress_ms"])
+        if self.current_playback is None:
+            return 0
+        return ms_to_us(self.current_playback["progress_ms"])
 
     @property
     def MinimumRate(self):
@@ -238,25 +249,26 @@ class MediaPlayer2:
     PropertiesChanged = signal()
 
     def eventLoop(self):
-        current_playback = self.spotify.current_playback()
+        new_playback = self.spotify.current_playback()
         request_time = int(time() * 1000)
         changed = {}
-        if self.current_playback is not None:
+        if self.current_playback is not None and new_playback is not None:
             for path, property_ in self.propertyMap.items():
-                if get_recursive_path(current_playback, path) != get_recursive_path(self.current_playback, path):
+                if get_recursive_path(new_playback, path) != get_recursive_path(self.current_playback, path):
                     changed[property_] = getattr(self, property_)
 
+
             # emit signal if song progress is out of sync with time
-            progress = current_playback["progress_ms"] - self.current_playback["progress_ms"]
-            expected = request_time - self.last_request if current_playback["is_playing"] else 0
+            progress = new_playback["progress_ms"] - self.current_playback["progress_ms"]
+            expected = request_time - self.last_request if new_playback["is_playing"] else 0
             if abs(progress - expected) > 20 and "Metadata" not in changed and "PlaybackStatus" not in changed:
                 print("Emitted Seeked signal")
-                self.Seeked.emit(ms_to_us(current_playback["progress_ms"]))
+                self.Seeked.emit(ms_to_us(new_playback["progress_ms"]))
 
         if changed:
             self.PropertiesChanged.emit("org.mpris.MediaPlayer2.Player", changed, [])
 
-        self.current_playback = current_playback
+        self.current_playback = new_playback
         # We can't use the timestamp property of current playback, as that rarely updates
         self.last_request = request_time
 
@@ -283,8 +295,11 @@ def float_to_percent(n):
     return int(n * 100)
 
 
-def get_recursive_path(data, args):
-    for arg in args:
-        data = data[arg]
+def get_recursive_path(data, path):
+    try:
+        for segment in path:
+            data = data[segment]
+    except KeyError:
+        return None
 
     return data

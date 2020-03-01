@@ -7,9 +7,6 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from . import MediaPlayer2
 import pkg_resources
 import webbrowser
-import pprint
-
-pp = pprint.PrettyPrinter(indent=4)
 
 ifaces = ["org.mpris.MediaPlayer2",
           "org.mpris.MediaPlayer2.Player"]  # , "org.mpris.MediaPlayer2.Playlists", "org.mpris.MediaPlayer2.TrackList"]
@@ -24,14 +21,13 @@ def main():
 
     token = authenticate()
     sp = Spotify(auth=token)
-    pp.pprint(sp.current_playback())
-    pp.pprint(sp.devices())
 
     bus = SessionBus()
     player = MediaPlayer2(sp)
     bus.publish("org.mpris.MediaPlayer2.spotpris", ("/org/mpris/MediaPlayer2", player))
     GLib.timeout_add_seconds(1, player.eventLoop)
 
+    player.eventLoop()  # make sure all values are initialized before starting main loop
     loop.run()
 
 
