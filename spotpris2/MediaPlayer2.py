@@ -21,6 +21,7 @@ class MediaPlayer2:
         self.spotify = spotify
         self.current_playback = None
         self.last_request = 0
+        self.position_offset = 0
 
     def Raise(self):
         pass
@@ -257,12 +258,17 @@ class MediaPlayer2:
                 if get_recursive_path(new_playback, path) != get_recursive_path(self.current_playback, path):
                     changed[property_] = getattr(self, property_)
 
-
             # emit signal if song progress is out of sync with time
             progress = new_playback["progress_ms"] - self.current_playback["progress_ms"]
             expected = request_time - self.last_request if new_playback["is_playing"] else 0
-            if abs(progress - expected) > 20 and "Metadata" not in changed and "PlaybackStatus" not in changed:
+            if "Metadata" in changed or "PlaybackStatus" in changed:
+                self.position_offset = 0
+            else:
+                self.position_offset += progress - expected
+
+            if abs(self.position_offset) > 100:
                 print("Emitted Seeked signal")
+                self.position_offset = 0
                 self.Seeked.emit(ms_to_us(new_playback["progress_ms"]))
 
         if changed:
