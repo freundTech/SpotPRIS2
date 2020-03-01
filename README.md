@@ -13,6 +13,14 @@ This software is still in development. While most features are implemented there
 You can install it using pip:
 ```pip install spotPRIS2```
 
+Known problems
+--------------
+1. **Podcasts, Radios, etc. aren't supported.**  
+   This is a limitation of the Spotify Web API. There's currently nothing I can do about it.
+
+2. **SpotPRIS2 breaks after some time, because the token expires**  
+   I'm working on it.
+
 ****
 
 This project is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Spotify AB, or any of its subsidiaries or its affiliates.
