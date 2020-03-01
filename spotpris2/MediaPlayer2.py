@@ -1,6 +1,7 @@
 from pydbus.generic import signal
 from pydbus import Variant
 from time import time
+import re
 
 
 class MediaPlayer2:
@@ -11,6 +12,10 @@ class MediaPlayer2:
         ("device", "volume_percent"): "Volume",
         ("item", "id"): "Metadata"
     }
+    uriFormats = [
+        re.compile("spotify:(?P<type>[a-z]*):(?P<id>[a-zA-Z0-9]*)"),
+        re.compile("https?://open.spotify.com/(?P<type>[a-z]*)/(?P<id>[a-zA-Z0-9]*)"),
+    ]
 
     def __init__(self, spotify):
         self.spotify = spotify
@@ -87,7 +92,25 @@ class MediaPlayer2:
         self.spotify.seek_track(us_to_ms(position))
 
     def OpenUri(self, uri):
-        print(f"OpenUri {uri}")
+        uri = uri.strip()
+        match = None
+        for format_ in self.uriFormats:
+            match = format_.fullmatch(uri)
+            if match:
+                break
+
+        if not match:
+            print("Tried to open invalid uri. Ignoring.")
+
+        type_ = match.group('type')
+        id_ = match.group('id')
+
+        new_uri = f"spotify:{type_}:{id_}"
+
+        if type_ in ['album', 'artist', 'playlist', 'show']:
+            self.spotify.start_playback(context_uri=new_uri)
+        else:
+            self.spotify.start_playback(uris=[new_uri])
 
     Seeked = signal()
 
