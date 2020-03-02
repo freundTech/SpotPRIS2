@@ -4,7 +4,7 @@ with open("README.md", "r") as f:
     long_description = f.read()
 
 setup(name="SpotPRIS2",
-      version='0.2',
+      version='0.3',
       author="Adrian Freund",
       author_email="adrian@freund.io",
       url="https://github.com/freundTech/SpotPRIS2",
@@ -12,7 +12,7 @@ setup(name="SpotPRIS2",
       long_description=long_description,
       packages=['spotpris2'],
       package_dir={'spotpris2': "spotpris2"},
-      package_data={'spotpris2': ['mpris/*.xml']},
+      package_data={'spotpris2': ['mpris/*.xml', 'html/*.html']},
       install_requires=[
           "PyGObject",
           "pydbus",
