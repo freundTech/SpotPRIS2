@@ -73,6 +73,9 @@ def getConfig():
         config["spotpris2"] = {}
     section = config["spotpris2"]
     if section.get("client_id") is None or section.get("client_secret") is None:
+        print("To use this software you need to provide your own spotify developer credentials. Go to "
+              "https://developer.spotify.com/dashboard/applications, create a new client id and add "
+              "http://localhost:8000 to the redirect URIs.")
         section["client_id"] = input("Enter client id: ")
         section["client_secret"] = input("Enter client secret: ")
         with open(f"{dirs.user_config_dir}.cfg", 'w+') as f:
