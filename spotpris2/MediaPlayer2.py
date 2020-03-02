@@ -87,10 +87,10 @@ class MediaPlayer2:
         new_position = max(position + us_to_ms(offset), 0)
         self.spotify.seek_track(new_position)
 
-    def SetPosition(self, trackId, position):
+    def SetPosition(self, track_id, position):
         if self.current_playback is None or self.current_playback["item"] is None:
             return
-        if trackId != track_id_to_path(self.current_playback["item"]["uri"]):
+        if track_id != track_id_to_path(self.current_playback["item"]["uri"]):
             print("Stale set position request. Ignoring.")
             return
         if position < 0 or position > ms_to_us(self.current_playback["item"]["duration_ms"]):
