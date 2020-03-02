@@ -39,7 +39,7 @@ def authenticate():
             self.send_response(200, "OK")
             self.end_headers()
 
-            self.wfile.write("Success".encode('utf-8'))
+            self.wfile.write(pkg_resources.resource_string(__name__, "html/success.html"))
             RequestHandler.callbackUri = self.path
 
     config = getConfig()
