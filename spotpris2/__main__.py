@@ -19,8 +19,8 @@ def main():
                          ifaces]
     loop = GLib.MainLoop()
 
-    token = authenticate()
-    sp = Spotify(auth=token)
+    oauth = authenticate()
+    sp = Spotify(oauth_manager=oauth)
 
     bus = SessionBus()
     player = MediaPlayer2(sp)
@@ -33,6 +33,8 @@ def main():
 
 def authenticate():
     class RequestHandler(BaseHTTPRequestHandler):
+        callbackUri = None
+
         def do_GET(self):
             self.send_response(200, "OK")
             self.end_headers()
@@ -52,17 +54,16 @@ def authenticate():
 
     token_info = oauth.get_cached_token()
 
-    if token_info:
-        return token_info["access_token"]
+    if not token_info:
+        url = oauth.get_authorize_url()
+        webbrowser.open(url)
 
-    url = oauth.get_authorize_url()
-    webbrowser.open(url)
+        server = HTTPServer(('', 8000), RequestHandler)
+        server.handle_request()
 
-    server = HTTPServer(('', 8000), RequestHandler)
-    server.handle_request()
-
-    code = oauth.parse_response_code(RequestHandler.callbackUri)
-    return oauth.get_access_token(code, as_dict=False)
+        code = oauth.parse_response_code(RequestHandler.callbackUri)
+        oauth.get_access_token(code, as_dict=False)
+    return oauth
 
 
 def getConfig():
