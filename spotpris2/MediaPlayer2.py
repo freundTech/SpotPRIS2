@@ -20,7 +20,7 @@ class MediaPlayer2:
     def __init__(self, spotify):
         self.spotify = spotify
         self.current_playback = None
-        self.last_request = 0
+        self.request_time = 0
         self.position_offset = 0
 
     def Raise(self):
@@ -250,17 +250,19 @@ class MediaPlayer2:
     PropertiesChanged = signal()
 
     def eventLoop(self):
-        new_playback = self.spotify.current_playback()
-        request_time = int(time() * 1000)
+        old_playback = self.current_playback
+        self.current_playback = self.spotify.current_playback()
+        old_request_time = self.request_time
+        self.request_time = int(time() * 1000)
         changed = {}
-        if self.current_playback is not None and new_playback is not None:
+        if self.current_playback is not None and old_playback is not None:
             for path, property_ in self.propertyMap.items():
-                if get_recursive_path(new_playback, path) != get_recursive_path(self.current_playback, path):
+                if get_recursive_path(old_playback, path) != get_recursive_path(self.current_playback, path):
                     changed[property_] = getattr(self, property_)
 
             # emit signal if song progress is out of sync with time
-            progress = new_playback["progress_ms"] - self.current_playback["progress_ms"]
-            expected = request_time - self.last_request if new_playback["is_playing"] else 0
+            progress = self.current_playback["progress_ms"] - old_playback["progress_ms"]
+            expected = self.request_time - old_request_time if self.current_playback["is_playing"] else 0
             if "Metadata" in changed or "PlaybackStatus" in changed:
                 self.position_offset = 0
             else:
@@ -269,14 +271,10 @@ class MediaPlayer2:
             if abs(self.position_offset) > 100:
                 print("Emitted Seeked signal")
                 self.position_offset = 0
-                self.Seeked.emit(ms_to_us(new_playback["progress_ms"]))
+                self.Seeked.emit(ms_to_us(self.current_playback["progress_ms"]))
 
         if changed:
             self.PropertiesChanged.emit("org.mpris.MediaPlayer2.Player", changed, [])
-
-        self.current_playback = new_playback
-        # We can't use the timestamp property of current playback, as that rarely updates
-        self.last_request = request_time
 
         return True  # Keep event loop running
 
