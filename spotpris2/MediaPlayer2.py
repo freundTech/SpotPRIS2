@@ -17,8 +17,9 @@ class MediaPlayer2:
         re.compile("https?://open.spotify.com/(?P<type>[a-z]*)/(?P<id>[a-zA-Z0-9]*)"),
     ]
 
-    def __init__(self, spotify):
+    def __init__(self, spotify, device_id=None):
         self.spotify = spotify
+        self.device_id = device_id
         self.current_playback = None
         self.request_time = 0
         self.position_offset = 0
@@ -43,11 +44,12 @@ class MediaPlayer2:
 
     @property
     def Identity(self):
-        active = [d for d in self.spotify.devices()["devices"] if d["is_active"]]
-        if not active:
-            return "No Spotify device active"
+        devices = self.spotify.devices()["devices"]
+        if self.device_id is not None:
+            active = [d for d in devices if d["id"] == self.device_id]
         else:
-            return active[0]["name"]
+            active = [d for d in devices if d["is_active"]]
+        return active[0]["name"]
 
     @property
     def SupportedUriSchemes(self):
@@ -58,13 +60,13 @@ class MediaPlayer2:
         return []
 
     def Next(self):
-        self.spotify.next_track()
+        self.spotify.next_track(device_id=self.device_id)
 
     def Previous(self):
-        self.spotify.previous_track()
+        self.spotify.previous_track(device_id=self.device_id)
 
     def Pause(self):
-        self.spotify.pause_playback()
+        self.spotify.pause_playback(device_id=self.device_id)
 
     def PlayPause(self):
         if self.current_playback is not None and self.current_playback["is_playing"]:
@@ -73,22 +75,24 @@ class MediaPlayer2:
             self.Play()
 
     def Stop(self):
-        self.spotify.pause_playback()
+        self.spotify.pause_playback(device_id=self.device_id)
 
     def Play(self):
         if self.current_playback is not None:
-            self.spotify.start_playback()
+            self.spotify.start_playback(device_id=self.device_id)
         else:
-            # Just start playback on the first available device. Better suggestions welcome
-            device = self.spotify.devices()["devices"][0]
-            self.spotify.transfer_playback(device_id=device["id"], force_play=True)
+            if self.device_id is None:
+                device_id = self.spotify()["devices"][0]["id"]
+            else:
+                device_id = self.device_id
+            self.spotify.transfer_playback(device_id=device_id, force_play=True)
 
     def Seek(self, offset):
         if self.current_playback is None:
             return
         position = self.current_playback["progress_ms"]
         new_position = max(position + us_to_ms(offset), 0)
-        self.spotify.seek_track(new_position)
+        self.spotify.seek_track(new_position, device_id=self.device_id)
 
     def SetPosition(self, track_id, position):
         if self.current_playback is None or self.current_playback["item"] is None:
@@ -98,7 +102,7 @@ class MediaPlayer2:
             return
         if position < 0 or position > ms_to_us(self.current_playback["item"]["duration_ms"]):
             return
-        self.spotify.seek_track(us_to_ms(position))
+        self.spotify.seek_track(us_to_ms(position), device_id=self.device_id)
 
     def OpenUri(self, uri):
         uri = uri.strip()
@@ -117,9 +121,9 @@ class MediaPlayer2:
         new_uri = f"spotify:{type_}:{id_}"
 
         if type_ in ['album', 'artist', 'playlist', 'show']:
-            self.spotify.start_playback(context_uri=new_uri)
+            self.spotify.start_playback(context_uri=new_uri, device_id=self.device_id)
         else:
-            self.spotify.start_playback(uris=[new_uri])
+            self.spotify.start_playback(uris=[new_uri], device_id=self.device_id)
 
     Seeked = signal()
 
@@ -158,7 +162,7 @@ class MediaPlayer2:
             print("Gotten invalid loop status from MPRIS2. Ignoring")
             return
 
-        self.spotify.repeat(status)
+        self.spotify.repeat(status, device_id=self.device_id)
 
     @property
     def Rate(self):
@@ -177,7 +181,7 @@ class MediaPlayer2:
 
     @Shuffle.setter
     def Shuffle(self, shuffle):
-        self.spotify.shuffle(shuffle)
+        self.spotify.shuffle(shuffle, device_id=self.device_id)
 
     @property
     def Metadata(self):
@@ -210,7 +214,7 @@ class MediaPlayer2:
     @Volume.setter
     def Volume(self, volume):
         volume = max(min(volume, 1.0), 0.0)
-        self.spotify.volume(float_to_percent(volume))
+        self.spotify.volume(float_to_percent(volume), device_id=self.device_id)
 
     @property
     def Position(self):
@@ -255,6 +259,8 @@ class MediaPlayer2:
     def eventLoop(self):
         old_playback = self.current_playback
         self.current_playback = self.spotify.current_playback()
+        if self.device_id is not None and self.current_playback["device"]["id"] != self.device_id:
+            self.current_playback = None
         old_request_time = self.request_time
         self.request_time = int(time() * 1000)
         changed = {}
