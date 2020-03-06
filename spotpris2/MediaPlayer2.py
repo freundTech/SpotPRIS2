@@ -67,18 +67,21 @@ class MediaPlayer2:
         self.spotify.pause_playback()
 
     def PlayPause(self):
-        if self.current_playback is None:
-            return
-        if self.current_playback["is_playing"]:
-            self.spotify.pause_playback()
+        if self.current_playback is not None and self.current_playback["is_playing"]:
+            self.Pause()
         else:
-            self.spotify.start_playback()
+            self.Play()
 
     def Stop(self):
         self.spotify.pause_playback()
 
     def Play(self):
-        self.spotify.start_playback()
+        if self.current_playback is not None:
+            self.spotify.start_playback()
+        else:
+            # Just start playback on the first available device. Better suggestions welcome
+            device = self.spotify.devices()["devices"][0]
+            self.spotify.transfer_playback(device_id=device["id"], force_play=True)
 
     def Seek(self, offset):
         if self.current_playback is None:
