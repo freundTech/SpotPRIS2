@@ -4,7 +4,8 @@ from spotipy import SpotifyOAuth, Spotify
 from appdirs import AppDirs
 from configparser import ConfigParser
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from . import MediaPlayer2
+
+from . import MediaPlayer2, BusManager
 import pkg_resources
 import webbrowser
 
@@ -22,12 +23,9 @@ def main():
     oauth = authenticate()
     sp = Spotify(oauth_manager=oauth)
 
-    bus = SessionBus()
-    player = MediaPlayer2(sp)
-    bus.publish("org.mpris.MediaPlayer2.spotpris", ("/org/mpris/MediaPlayer2", player))
-    GLib.timeout_add_seconds(1, player.eventLoop)
+    manager = BusManager(sp)
+    GLib.timeout_add_seconds(1, manager.main_loop)
 
-    player.eventLoop()  # make sure all values are initialized before starting main loop
     try:
         loop.run()
     except KeyboardInterrupt:

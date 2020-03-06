@@ -20,8 +20,8 @@ class MediaPlayer2:
     def __init__(self, spotify, device_id=None):
         self.spotify = spotify
         self.device_id = device_id
-        self.current_playback = None
-        self.request_time = 0
+        self.request_time = int(time() * 1000)
+        self.current_playback = self._current_playback()
         self.position_offset = 0
 
     def Raise(self):
@@ -256,11 +256,9 @@ class MediaPlayer2:
 
     PropertiesChanged = signal()
 
-    def eventLoop(self):
+    def event_loop(self):
         old_playback = self.current_playback
-        self.current_playback = self.spotify.current_playback()
-        if self.device_id is not None and self.current_playback["device"]["id"] != self.device_id:
-            self.current_playback = None
+        self.current_playback = self._current_playback()
         old_request_time = self.request_time
         self.request_time = int(time() * 1000)
         changed = {}
@@ -286,6 +284,13 @@ class MediaPlayer2:
             self.PropertiesChanged.emit("org.mpris.MediaPlayer2.Player", changed, [])
 
         return True  # Keep event loop running
+
+    def _current_playback(self):
+        current_playback = self.spotify.current_playback()
+        if current_playback is not None and self.device_id is not None and current_playback["device"]["id"] != self.device_id:
+            current_playback = None
+
+        return current_playback
 
 
 def track_id_to_path(track):
