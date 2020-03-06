@@ -28,7 +28,10 @@ def main():
     GLib.timeout_add_seconds(1, player.eventLoop)
 
     player.eventLoop()  # make sure all values are initialized before starting main loop
-    loop.run()
+    try:
+        loop.run()
+    except KeyboardInterrupt:
+        pass
 
 
 def authenticate():
