@@ -19,11 +19,11 @@ class MediaPlayer2:
         re.compile("https?://open.spotify.com/(?P<type>[a-z]*)/(?P<id>[a-zA-Z0-9]*)"),
     ]
 
-    def __init__(self, spotify, device_id=None):
+    def __init__(self, spotify, current_playback, device_id=None):
         self.spotify = spotify
         self.device_id = device_id
         self.request_time = time_millis()
-        self.current_playback = self._current_playback()
+        self.current_playback = current_playback
         self.position_offset = 0
 
     def Raise(self):
@@ -46,12 +46,9 @@ class MediaPlayer2:
 
     @property
     def Identity(self):
-        devices = self.spotify.devices()["devices"]
-        if self.device_id is not None:
-            active = [d for d in devices if d["id"] == self.device_id]
-        else:
-            active = [d for d in devices if d["is_active"]]
-        return active[0]["name"]
+        if self.current_playback is None:
+            return "No devices found"
+        return self.current_playback["device"]["name"]
 
     @property
     def SupportedUriSchemes(self):
@@ -80,7 +77,7 @@ class MediaPlayer2:
         self.spotify.pause_playback(device_id=self.device_id)
 
     def Play(self):
-        if self.current_playback is not None:
+        if self.current_playback is not None and self.current_playback["device"]["is_active"]:
             self.spotify.start_playback(device_id=self.device_id)
         else:
             if self.device_id is None:
@@ -260,7 +257,7 @@ class MediaPlayer2:
 
     def event_loop(self, current_playback):
         old_playback = self.current_playback
-        self.current_playback = self._current_playback(current_playback)
+        self.current_playback = current_playback
         old_request_time = self.request_time
         self.request_time = time_millis()
         changed = {}
@@ -278,15 +275,8 @@ class MediaPlayer2:
                 self.position_offset += progress - expected
 
             if abs(self.position_offset) > 100:
-                print("Emitted Seeked signal")
                 self.position_offset = 0
                 self.Seeked.emit(ms_to_us(self.current_playback["progress_ms"]))
 
         if changed:
             self.PropertiesChanged.emit("org.mpris.MediaPlayer2.Player", changed, [])
-
-    def _current_playback(self, current_playback):
-        if current_playback is not None and self.device_id is not None and \
-                current_playback["device"]["id"] != self.device_id:
-            current_playback = None
-        return current_playback

@@ -11,23 +11,22 @@ class BusManager:
 
     def main_loop(self):
         devices = self.spotify.devices()["devices"]
-        devices_ids = [d["id"] for d in devices]
+        devices = {d["id"]: d for d in devices}
         current_playback = self.spotify.current_playback()
-        for device in devices:
-            if device["id"] not in self.current_devices and self._is_device_allowed(device):
-                self._create_device(device["id"])
+        for device_id in devices:
+            if device_id not in self.current_devices and self._is_device_allowed(devices[device_id]):
+                self._create_device(device_id, self._create_playback_state(devices[device_id], current_playback))
 
-        for device in list(self.current_devices.keys()):
-            if device not in devices_ids:
-                self._remove_device(device)
+        for device_id in list(self.current_devices.keys()):
+            if device_id not in devices:
+                self._remove_device(device_id)
             else:
-                self.current_devices[device].player.event_loop(current_playback)
+                self.current_devices[device_id].player.event_loop(
+                    self._create_playback_state(devices[device_id], current_playback))
 
-        return True
-
-    def _create_device(self, device_id):
+    def _create_device(self, device_id, current_playback):
         bus = new_session_bus()
-        player = MediaPlayer2(self.spotify, device_id=device_id)
+        player = MediaPlayer2(self.spotify, current_playback, device_id=device_id)
         publication = bus.publish(f"org.mpris.MediaPlayer2.spotpris.device{device_id}",
                                   ("/org/mpris/MediaPlayer2", player))
         self.current_devices[device_id] = PlayerInfo(player, publication)
@@ -44,6 +43,17 @@ class BusManager:
             return device["name"] not in self.ignored_devices and device["id"] not in self.ignored_devices
         else:
             return True
+
+    def _create_playback_state(self, device, current_playback):
+        if current_playback is None:
+            return current_playback
+        if current_playback["device"]["id"] == device["id"]:
+            return current_playback
+        else:
+            current_playback = current_playback.copy()
+            current_playback["is_playing"] = False
+            current_playback["device"] = device
+            return current_playback
 
 
 class PlayerInfo:
