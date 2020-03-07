@@ -41,9 +41,9 @@ class BusManager:
 
     def _is_device_allowed(self, device):
         if self.allowed_devices is not None:
-            return device["name"] in self.allowed_devices
+            return device["name"] in self.allowed_devices or device["id"] in self.allowed_devices
         elif self.ignored_devices is not None:
-            return device["name"] not in self.ignored_devices
+            return device["name"] not in self.ignored_devices and device["id"] not in self.ignored_devices
         else:
             return True
 
