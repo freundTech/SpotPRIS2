@@ -41,7 +41,27 @@ def get_recursive_path(data, path):
     try:
         for segment in path:
             data = data[segment]
-    except KeyError:
+    except (KeyError, TypeError):
         return None
 
     return data
+
+
+def create_playback_state(current_playback, device=None):
+    if current_playback is None:
+        current_playback = {
+            'device': device,
+            'item': None,
+            'context': None,
+            'is_playing': False,
+            'progress_ms': 0,
+            'repeat_state': "off",
+            'shuffle_state': False,
+        }
+    if device is None or current_playback["device"]["id"] == device["id"]:
+        return current_playback
+    else:
+        current_playback = current_playback.copy()
+        current_playback["is_playing"] = False
+        current_playback["device"] = device
+        return current_playback

@@ -1,4 +1,4 @@
-from .util import new_session_bus
+from .util import new_session_bus, create_playback_state
 from . import MediaPlayer2
 
 
@@ -15,14 +15,14 @@ class BusManager:
         current_playback = self.spotify.current_playback()
         for device_id in devices:
             if device_id not in self.current_devices and self._is_device_allowed(devices[device_id]):
-                self._create_device(device_id, self._create_playback_state(devices[device_id], current_playback))
+                self._create_device(device_id, create_playback_state(current_playback, device=devices[device_id]))
 
         for device_id in list(self.current_devices.keys()):
             if device_id not in devices:
                 self._remove_device(device_id)
             else:
                 self.current_devices[device_id].player.event_loop(
-                    self._create_playback_state(devices[device_id], current_playback))
+                    create_playback_state(current_playback, device=devices[device_id]))
 
     def _create_device(self, device_id, current_playback):
         bus = new_session_bus()
@@ -43,17 +43,6 @@ class BusManager:
             return device["name"] not in self.ignored_devices and device["id"] not in self.ignored_devices
         else:
             return True
-
-    def _create_playback_state(self, device, current_playback):
-        if current_playback is None:
-            return current_playback
-        if current_playback["device"]["id"] == device["id"]:
-            return current_playback
-        else:
-            current_playback = current_playback.copy()
-            current_playback["is_playing"] = False
-            current_playback["device"] = device
-            return current_playback
 
 
 class PlayerInfo:

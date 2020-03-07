@@ -46,8 +46,8 @@ class MediaPlayer2:
 
     @property
     def Identity(self):
-        if self.current_playback is None:
-            return "No devices found"
+        if self.device_id is None:
+            return "Spotpris"
         return self.current_playback["device"]["name"]
 
     @property
@@ -68,7 +68,7 @@ class MediaPlayer2:
         self.spotify.pause_playback(device_id=self.device_id)
 
     def PlayPause(self):
-        if self.current_playback is not None and self.current_playback["is_playing"]:
+        if self.current_playback["is_playing"]:
             self.Pause()
         else:
             self.Play()
@@ -77,7 +77,7 @@ class MediaPlayer2:
         self.spotify.pause_playback(device_id=self.device_id)
 
     def Play(self):
-        if self.current_playback is not None and self.current_playback["device"]["is_active"]:
+        if self.current_playback["device"] is not None and self.current_playback["device"]["is_active"]:
             self.spotify.start_playback(device_id=self.device_id)
         else:
             if self.device_id is None:
@@ -87,14 +87,14 @@ class MediaPlayer2:
             self.spotify.transfer_playback(device_id=device_id, force_play=True)
 
     def Seek(self, offset):
-        if self.current_playback is None:
+        if self.current_playback["item"] is None:
             return
         position = self.current_playback["progress_ms"]
         new_position = max(position + us_to_ms(offset), 0)
         self.spotify.seek_track(new_position, device_id=self.device_id)
 
     def SetPosition(self, track_id, position):
-        if self.current_playback is None or self.current_playback["item"] is None:
+        if self.current_playback["item"] is None:
             return
         if track_id != track_id_to_path(self.current_playback["item"]["uri"]):
             print("Stale set position request. Ignoring.")
@@ -128,7 +128,7 @@ class MediaPlayer2:
 
     @property
     def PlaybackStatus(self):
-        if self.current_playback is None:
+        if self.current_playback["item"] is None:
             return "Stopped"
         elif self.current_playback["is_playing"]:
             return "Playing"
@@ -137,8 +137,6 @@ class MediaPlayer2:
 
     @property
     def LoopStatus(self):
-        if self.current_playback is None:
-            return "None"
         status = self.current_playback["repeat_state"]
         if status == "off":
             return "None"
@@ -174,8 +172,6 @@ class MediaPlayer2:
 
     @property
     def Shuffle(self):
-        if self.current_playback is None:
-            return False
         return self.current_playback["shuffle_state"]
 
     @Shuffle.setter
@@ -184,7 +180,7 @@ class MediaPlayer2:
 
     @property
     def Metadata(self):
-        if self.current_playback is None or self.current_playback["item"] is None:
+        if self.current_playback["item"] is None:
             return {"mpris:trackid": Variant('o', "/org/mpris/MediaPlayer2/TrackList/NoTrack")}
 
         item = self.current_playback["item"]
@@ -206,7 +202,7 @@ class MediaPlayer2:
 
     @property
     def Volume(self):
-        if self.current_playback is None:
+        if self.current_playback["device"] is None:
             return 1.0
         return percent_to_float(self.current_playback["device"]["volume_percent"])
 
@@ -261,22 +257,22 @@ class MediaPlayer2:
         old_request_time = self.request_time
         self.request_time = time_millis()
         changed = {}
-        if self.current_playback is not None and old_playback is not None:
-            for path, property_ in self.propertyMap.items():
-                if get_recursive_path(old_playback, path) != get_recursive_path(self.current_playback, path):
-                    changed[property_] = getattr(self, property_)
 
-            # emit signal if song progress is out of sync with time
-            progress = self.current_playback["progress_ms"] - old_playback["progress_ms"]
-            expected = self.request_time - old_request_time if self.current_playback["is_playing"] else 0
-            if "Metadata" in changed or "PlaybackStatus" in changed:
-                self.position_offset = 0
-            else:
-                self.position_offset += progress - expected
+        for path, property_ in self.propertyMap.items():
+            if get_recursive_path(old_playback, path) != get_recursive_path(self.current_playback, path):
+                changed[property_] = getattr(self, property_)
 
-            if abs(self.position_offset) > 100:
-                self.position_offset = 0
-                self.Seeked.emit(ms_to_us(self.current_playback["progress_ms"]))
+        # emit signal if song progress is out of sync with time
+        progress = self.current_playback["progress_ms"] - old_playback["progress_ms"]
+        expected = self.request_time - old_request_time if self.current_playback["is_playing"] else 0
+        if "Metadata" in changed or "PlaybackStatus" in changed:
+            self.position_offset = 0
+        else:
+            self.position_offset += progress - expected
+
+        if abs(self.position_offset) > 100:
+            self.position_offset = 0
+            self.Seeked.emit(ms_to_us(self.current_playback["progress_ms"]))
 
         if changed:
             self.PropertiesChanged.emit("org.mpris.MediaPlayer2.Player", changed, [])

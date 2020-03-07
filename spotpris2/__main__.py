@@ -1,11 +1,13 @@
 import sys
 
 from gi.repository import GLib
+from pydbus import SessionBus
 from spotipy import SpotifyOAuth, Spotify
 from appdirs import AppDirs
 from configparser import ConfigParser
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
+from .util import create_playback_state
 from . import MediaPlayer2, BusManager
 import pkg_resources
 import webbrowser
@@ -22,6 +24,7 @@ def main():
     parser.add_argument('-d', '--devices', nargs='+', metavar="DEVICE",
                         help="Only create interfaces for the listed devices")
     parser.add_argument('-i', '--ignore', nargs='+', metavar="DEVICE", help="Ignore the listed devices")
+    parser.add_argument('-a', '--auto', action="store_true", help="Automatically control the active device")
     parser.add_argument('-l', '--list', nargs='?', choices=["name", "id"], const="name",
                         help="List available devices and exit")
     args = parser.parse_args()
@@ -40,15 +43,29 @@ def main():
             print(devices[args.list])
         return
 
-    if args.devices and args.ignore:
-        parser.error("--devices and --ignore can't be used at the same time")
+    exclusive_count = 0
+    for arg in [args.devices, args.ignore, args.auto]:
+        if arg:
+            exclusive_count += 1
+    if exclusive_count >= 2:
+        parser.error("Only one of --devices, --ignore and --auto can be used at the same time")
         return
 
-    manager = BusManager(sp, args.devices, args.ignore)
+    if not args.auto:
+        manager = BusManager(sp, args.devices, args.ignore)
 
-    def timeout_handler():
-        manager.main_loop()
-        return True
+        def timeout_handler():
+            manager.main_loop()
+            return True
+    else:
+        player = MediaPlayer2(sp, create_playback_state(sp.current_playback()))
+        bus = SessionBus()
+        bus.publish(f"org.mpris.MediaPlayer2.spotpris",
+                    ("/org/mpris/MediaPlayer2", player))
+
+        def timeout_handler():
+            player.event_loop(create_playback_state(sp.current_playback()))
+            return True
 
     GLib.timeout_add_seconds(1, timeout_handler)
 
