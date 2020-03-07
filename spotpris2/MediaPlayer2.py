@@ -1,7 +1,9 @@
 from pydbus.generic import signal
 from pydbus import Variant
-from time import time
 import re
+
+from util import ms_to_us, get_recursive_path, float_to_percent, percent_to_float, track_id_to_path, us_to_ms, \
+    time_millis
 
 
 class MediaPlayer2:
@@ -20,7 +22,7 @@ class MediaPlayer2:
     def __init__(self, spotify, device_id=None):
         self.spotify = spotify
         self.device_id = device_id
-        self.request_time = int(time() * 1000)
+        self.request_time = time_millis()
         self.current_playback = self._current_playback()
         self.position_offset = 0
 
@@ -260,7 +262,7 @@ class MediaPlayer2:
         old_playback = self.current_playback
         self.current_playback = self._current_playback()
         old_request_time = self.request_time
-        self.request_time = int(time() * 1000)
+        self.request_time = time_millis()
         changed = {}
         if self.current_playback is not None and old_playback is not None:
             for path, property_ in self.propertyMap.items():
@@ -287,37 +289,7 @@ class MediaPlayer2:
 
     def _current_playback(self):
         current_playback = self.spotify.current_playback()
-        if current_playback is not None and self.device_id is not None and current_playback["device"]["id"] != self.device_id:
+        if current_playback is not None and self.device_id is not None and \
+                current_playback["device"]["id"] != self.device_id:
             current_playback = None
-
         return current_playback
-
-
-def track_id_to_path(track):
-    return '/' + track.replace(':', '/')
-
-
-def ms_to_us(ms):
-    return ms * 1000
-
-
-def us_to_ms(us):
-    return us // 1000
-
-
-def percent_to_float(percent):
-    return percent / 100
-
-
-def float_to_percent(n):
-    return int(n * 100)
-
-
-def get_recursive_path(data, path):
-    try:
-        for segment in path:
-            data = data[segment]
-    except KeyError:
-        return None
-
-    return data

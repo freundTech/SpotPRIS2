@@ -1,5 +1,4 @@
 from gi.repository import GLib
-from pydbus import SessionBus
 from spotipy import SpotifyOAuth, Spotify
 from appdirs import AppDirs
 from configparser import ConfigParser
@@ -43,7 +42,7 @@ def authenticate():
             self.wfile.write(pkg_resources.resource_string(__name__, "html/success.html"))
             RequestHandler.callbackUri = self.path
 
-    config = getConfig()
+    config = get_config()
 
     oauth = SpotifyOAuth(
         client_id=config["client_id"],
@@ -67,7 +66,7 @@ def authenticate():
     return oauth
 
 
-def getConfig():
+def get_config():
     config = ConfigParser()
     config.read(f"{dirs.user_config_dir}.cfg")
     if "spotpris2" not in config:
