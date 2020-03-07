@@ -1,3 +1,5 @@
+import sys
+
 from gi.repository import GLib
 from spotipy import SpotifyOAuth, Spotify
 from appdirs import AppDirs
@@ -7,6 +9,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from . import MediaPlayer2, BusManager
 import pkg_resources
 import webbrowser
+import argparse
 
 ifaces = ["org.mpris.MediaPlayer2",
           "org.mpris.MediaPlayer2.Player"]  # , "org.mpris.MediaPlayer2.Playlists", "org.mpris.MediaPlayer2.TrackList"]
@@ -15,15 +18,37 @@ scope = "user-modify-playback-state,user-read-playback-state,user-read-currently
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Control Spotify Connect devices using MPRIS2")
+    parser.add_argument('-d', '--devices', nargs='+', metavar="DEVICE", help="Only create interfaces for the listed devices")
+    parser.add_argument('-i', '--ignore', nargs='+', metavar="DEVICE", help="Ignore the listed devices")
+    parser.add_argument('-l', '--list', action="store_true", help="List available devices and exit")
+    args = parser.parse_args()
+
     MediaPlayer2.dbus = [pkg_resources.resource_string(__name__, f"mpris/{iface}.xml").decode('utf-8') for iface in
                          ifaces]
+
     loop = GLib.MainLoop()
 
     oauth = authenticate()
     sp = Spotify(oauth_manager=oauth)
 
-    manager = BusManager(sp)
-    GLib.timeout_add_seconds(1, manager.main_loop)
+    if args.list:
+        devices = sp.devices()
+        for devices in devices["devices"]:
+            print(devices["name"])
+        return
+
+    if args.devices and args.ignore:
+        parser.error("--devices and --ignore can't be used at the same time")
+        return
+
+    manager = BusManager(sp, args.devices, args.ignore)
+
+    def timeout_handler():
+        manager.main_loop()
+        return True
+
+    GLib.timeout_add_seconds(1, timeout_handler)
 
     try:
         loop.run()

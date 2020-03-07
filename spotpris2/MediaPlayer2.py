@@ -2,7 +2,7 @@ from pydbus.generic import signal
 from pydbus import Variant
 import re
 
-from util import ms_to_us, get_recursive_path, float_to_percent, percent_to_float, track_id_to_path, us_to_ms, \
+from .util import ms_to_us, get_recursive_path, float_to_percent, percent_to_float, track_id_to_path, us_to_ms, \
     time_millis
 
 

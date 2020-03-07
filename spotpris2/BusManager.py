@@ -5,16 +5,19 @@ from . import MediaPlayer2
 
 
 class BusManager:
-    def __init__(self, spotify):
+    def __init__(self, spotify, allowed_devices=None, ignored_devices=None):
         self.spotify = spotify
+        self.allowed_devices = allowed_devices
+        self.ignored_devices = ignored_devices
         self.current_devices = {}
 
     def main_loop(self):
-        devices_ids = [d["id"] for d in self.spotify.devices()["devices"]]
+        devices = self.spotify.devices()["devices"]
+        devices_ids = [d["id"] for d in devices]
         current_playback = self.spotify.current_playback()
-        for device in devices_ids:
-            if device not in self.current_devices:
-                self._create_device(device)
+        for device in devices:
+            if device["id"] not in self.current_devices and self._is_device_allowed(device):
+                self._create_device(device["id"])
 
         for device in list(self.current_devices.keys()):
             if device not in devices_ids:
@@ -35,6 +38,15 @@ class BusManager:
         player_info = self.current_devices[device_id]
         player_info.publication.unpublish()
         del self.current_devices[device_id]
+
+    def _is_device_allowed(self, device):
+        if self.allowed_devices is not None:
+            return device["name"] in self.allowed_devices
+        elif self.ignored_devices is not None:
+            return device["name"] not in self.ignored_devices
+        else:
+            return True
+
 
 
 class PlayerInfo:
