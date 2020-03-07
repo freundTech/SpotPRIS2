@@ -258,9 +258,9 @@ class MediaPlayer2:
 
     PropertiesChanged = signal()
 
-    def event_loop(self):
+    def event_loop(self, current_playback):
         old_playback = self.current_playback
-        self.current_playback = self._current_playback()
+        self.current_playback = self._current_playback(current_playback)
         old_request_time = self.request_time
         self.request_time = time_millis()
         changed = {}
@@ -285,10 +285,7 @@ class MediaPlayer2:
         if changed:
             self.PropertiesChanged.emit("org.mpris.MediaPlayer2.Player", changed, [])
 
-        return True  # Keep event loop running
-
-    def _current_playback(self):
-        current_playback = self.spotify.current_playback()
+    def _current_playback(self, current_playback=None):
         if current_playback is not None and self.device_id is not None and \
                 current_playback["device"]["id"] != self.device_id:
             current_playback = None
