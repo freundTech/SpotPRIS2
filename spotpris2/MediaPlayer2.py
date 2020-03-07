@@ -285,7 +285,7 @@ class MediaPlayer2:
         if changed:
             self.PropertiesChanged.emit("org.mpris.MediaPlayer2.Player", changed, [])
 
-    def _current_playback(self, current_playback=None):
+    def _current_playback(self, current_playback):
         if current_playback is not None and self.device_id is not None and \
                 current_playback["device"]["id"] != self.device_id:
             current_playback = None

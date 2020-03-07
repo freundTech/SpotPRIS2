@@ -12,6 +12,7 @@ def new_session_bus():
 def new_bus(type_):
     return connect(Gio.dbus_address_get_for_bus_sync(type_))
 
+
 def time_millis():
     return int(time() * 1000)
 

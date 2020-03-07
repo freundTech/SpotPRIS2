@@ -1,5 +1,3 @@
-from gi.repository import GLib
-
 from .util import new_session_bus
 from . import MediaPlayer2
 
@@ -46,7 +44,6 @@ class BusManager:
             return device["name"] not in self.ignored_devices and device["id"] not in self.ignored_devices
         else:
             return True
-
 
 
 class PlayerInfo:

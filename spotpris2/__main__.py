@@ -19,9 +19,11 @@ scope = "user-modify-playback-state,user-read-playback-state,user-read-currently
 
 def main():
     parser = argparse.ArgumentParser(description="Control Spotify Connect devices using MPRIS2")
-    parser.add_argument('-d', '--devices', nargs='+', metavar="DEVICE", help="Only create interfaces for the listed devices")
+    parser.add_argument('-d', '--devices', nargs='+', metavar="DEVICE",
+                        help="Only create interfaces for the listed devices")
     parser.add_argument('-i', '--ignore', nargs='+', metavar="DEVICE", help="Ignore the listed devices")
-    parser.add_argument('-l', '--list', nargs='?', choices=["name", "id"], const="name", help="List available devices and exit")
+    parser.add_argument('-l', '--list', nargs='?', choices=["name", "id"], const="name",
+                        help="List available devices and exit")
     args = parser.parse_args()
 
     MediaPlayer2.dbus = [pkg_resources.resource_string(__name__, f"mpris/{iface}.xml").decode('utf-8') for iface in
