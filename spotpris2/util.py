@@ -47,18 +47,19 @@ def get_recursive_path(data, path):
     return data
 
 
-def create_playback_state(current_playback, device=None):
+def create_playback_state(current_playback, device):
     if current_playback is None:
-        current_playback = {
+        return {
             'device': device,
             'item': None,
             'context': None,
             'is_playing': False,
             'progress_ms': 0,
+            # Not ideal, but no way to get the real values while nothing is playing
             'repeat_state': "off",
             'shuffle_state': False,
         }
-    if device is None or current_playback["device"]["id"] == device["id"]:
+    elif current_playback["device"]["id"] == device["id"]:
         return current_playback
     else:
         current_playback = current_playback.copy()

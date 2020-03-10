@@ -49,7 +49,7 @@ class MultiBusManager(BusManager):
         current_playback = self.spotify.current_playback()
         for device_id in devices:
             if device_id not in self.current_devices and self._is_device_allowed(devices[device_id]):
-                self._create_device(device_id, create_playback_state(current_playback, device=devices[device_id]))
+                self._create_device(device_id, create_playback_state(current_playback, devices[device_id]))
 
         for device_id in list(self.current_devices.keys()):
             if device_id not in devices:
