@@ -4,7 +4,7 @@ with open("README.md", "r") as f:
     long_description = f.read()
 
 setup(name="SpotPRIS2",
-      version='0.3.1',
+      version='0.4',
       author="Adrian Freund",
       author_email="adrian@freund.io",
       url="https://github.com/freundTech/SpotPRIS2",
