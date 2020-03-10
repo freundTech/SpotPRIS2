@@ -51,8 +51,13 @@ Known problems
     want to control, so we don't offer any interface. You can use normal mode if you want to be able to start playback
     using MPRIS2.
 
+Systemd
+--------
+To use SpotPRIS2 with systemd, the provided unit file (`contrib/spotpris2.service`) should be copied into `/usr/lib/systemd/user`.
+
 ****
 
 This project is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Spotify AB,
 or any of its subsidiaries or its affiliates.
+
 
