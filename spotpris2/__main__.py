@@ -8,7 +8,8 @@ from configparser import ConfigParser
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from .util import create_playback_state
-from . import MediaPlayer2, BusManager
+from .BusManager import SingleBusManager, MultiBusManager
+from . import MediaPlayer2
 import pkg_resources
 import webbrowser
 import argparse
@@ -52,20 +53,13 @@ def main():
         return
 
     if not args.auto:
-        manager = BusManager(sp, args.devices, args.ignore)
-
-        def timeout_handler():
-            manager.main_loop()
-            return True
+        manager = MultiBusManager(sp, args.devices, args.ignore)
     else:
-        player = MediaPlayer2(sp, create_playback_state(sp.current_playback()))
-        bus = SessionBus()
-        bus.publish(f"org.mpris.MediaPlayer2.spotpris",
-                    ("/org/mpris/MediaPlayer2", player))
+        manager = SingleBusManager(sp)
 
-        def timeout_handler():
-            player.event_loop(create_playback_state(sp.current_playback()))
-            return True
+    def timeout_handler():
+        manager.main_loop()
+        return True
 
     GLib.timeout_add_seconds(1, timeout_handler)
 

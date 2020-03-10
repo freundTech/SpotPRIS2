@@ -46,8 +46,6 @@ class MediaPlayer2:
 
     @property
     def Identity(self):
-        if self.device_id is None:
-            return "Spotpris"
         return self.current_playback["device"]["name"]
 
     @property
@@ -276,3 +274,6 @@ class MediaPlayer2:
 
         if changed:
             self.PropertiesChanged.emit("org.mpris.MediaPlayer2.Player", changed, [])
+
+        if self.current_playback["device"]["name"] != old_playback["device"]["name"]:
+            self.PropertiesChanged.emit("org.mpris.MediaPlayer2", {"Identity": self.Identity}, [])

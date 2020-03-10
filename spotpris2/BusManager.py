@@ -1,10 +1,44 @@
+from pydbus import SessionBus
+
 from .util import new_session_bus, create_playback_state
 from . import MediaPlayer2
+from abc import ABCMeta, abstractmethod, ABC
 
 
-class BusManager:
-    def __init__(self, spotify, allowed_devices=None, ignored_devices=None):
+class BusManager(metaclass=ABCMeta):
+    def __init__(self, spotify):
         self.spotify = spotify
+
+    @abstractmethod
+    def main_loop(self):
+        pass
+
+
+class SingleBusManager(BusManager):
+    def __init__(self, spotify):
+        super().__init__(spotify)
+        self.publication = None
+        self.bus = SessionBus()  # Use built in method to get bus singleton
+        self.player = None
+
+    def main_loop(self):
+        current_playback = self.spotify.current_playback()
+        if current_playback is None:
+            if self.publication is not None:
+                self.publication.unpublish()
+                self.publication = None
+        else:
+            if self.publication is None:
+                if self.player is None:
+                    self.player = MediaPlayer2(self.spotify, current_playback)
+                self.publication = self.bus.publish(f"org.mpris.MediaPlayer2.spotpris.device",
+                                                    ("/org/mpris/MediaPlayer2", self.player))
+            self.player.event_loop(current_playback)
+
+
+class MultiBusManager(BusManager):
+    def __init__(self, spotify, allowed_devices=None, ignored_devices=None):
+        super().__init__(spotify)
         self.allowed_devices = allowed_devices
         self.ignored_devices = ignored_devices
         self.current_devices = {}
@@ -29,7 +63,7 @@ class BusManager:
         player = MediaPlayer2(self.spotify, current_playback, device_id=device_id)
         publication = bus.publish(f"org.mpris.MediaPlayer2.spotpris.device{device_id}",
                                   ("/org/mpris/MediaPlayer2", player))
-        self.current_devices[device_id] = PlayerInfo(player, publication)
+        self.current_devices[device_id] = self.PlayerInfo(player, publication)
 
     def _remove_device(self, device_id):
         player_info = self.current_devices[device_id]
@@ -44,8 +78,7 @@ class BusManager:
         else:
             return True
 
-
-class PlayerInfo:
-    def __init__(self, player, publication):
-        self.player = player
-        self.publication = publication
+    class PlayerInfo:
+        def __init__(self, player, publication):
+            self.player = player
+            self.publication = publication
