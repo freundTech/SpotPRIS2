@@ -1,0 +1,15 @@
+[Unit]
+Description=Control Spotify Connect devices using MPRIS2
+Documentation=https://github.com/freundTech/SpotPRIS2
+Requires=dbus.socket
+After=dbus.socket
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/spotpris2
+Restart=always
+RestartSec=12
+
+[Install]
+WantedBy=default.target
