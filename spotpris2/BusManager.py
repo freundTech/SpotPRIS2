@@ -2,12 +2,19 @@ from pydbus import SessionBus
 
 from .util import new_session_bus, create_playback_state
 from . import MediaPlayer2
-from abc import ABCMeta, abstractmethod, ABC
+from abc import ABCMeta, abstractmethod
 
 
 class BusManager(metaclass=ABCMeta):
-    def __init__(self, spotify):
+    def __init__(self, spotify, app_name):
         self.spotify = spotify
+        self.app_name = app_name
+
+    def _publish(self, bus, player, bus_postfix=None):
+        bus_name = f"org.mpris.MediaPlayer2.{self.app_name}"
+        if bus_postfix is not None:
+            bus_name = f"{bus_name}.{bus_postfix}"
+        return bus.publish(bus_name, ("/org/mpris/MediaPlayer2", player))
 
     @abstractmethod
     def main_loop(self):
@@ -15,8 +22,8 @@ class BusManager(metaclass=ABCMeta):
 
 
 class SingleBusManager(BusManager):
-    def __init__(self, spotify):
-        super().__init__(spotify)
+    def __init__(self, spotify, app_name="spotpris"):
+        super().__init__(spotify, app_name)
         self.publication = None
         self.bus = SessionBus()  # Use built in method to get bus singleton
         self.player = None
@@ -31,14 +38,13 @@ class SingleBusManager(BusManager):
             if self.publication is None:
                 if self.player is None:
                     self.player = MediaPlayer2(self.spotify, current_playback)
-                self.publication = self.bus.publish(f"org.mpris.MediaPlayer2.spotpris.device",
-                                                    ("/org/mpris/MediaPlayer2", self.player))
+                self.publication = self._publish(self.bus, self.player)
             self.player.event_loop(current_playback)
 
 
 class MultiBusManager(BusManager):
-    def __init__(self, spotify, allowed_devices=None, ignored_devices=None):
-        super().__init__(spotify)
+    def __init__(self, spotify, allowed_devices=None, ignored_devices=None, app_name="spotpris"):
+        super().__init__(spotify, app_name)
         self.allowed_devices = allowed_devices
         self.ignored_devices = ignored_devices
         self.current_devices = {}
@@ -61,8 +67,7 @@ class MultiBusManager(BusManager):
     def _create_device(self, device_id, current_playback):
         bus = new_session_bus()
         player = MediaPlayer2(self.spotify, current_playback, device_id=device_id)
-        publication = bus.publish(f"org.mpris.MediaPlayer2.spotpris.device{device_id}",
-                                  ("/org/mpris/MediaPlayer2", player))
+        publication = self._publish(bus, player, bus_postfix=f"device{device_id}")
         self.current_devices[device_id] = self.PlayerInfo(player, publication)
 
     def _remove_device(self, device_id):
