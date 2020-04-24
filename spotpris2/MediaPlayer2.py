@@ -1,6 +1,10 @@
+from typing import Dict, Any, List
+
 from pydbus.generic import signal
 from pydbus import Variant
 import re
+
+from spotipy import Spotify
 
 from .util import ms_to_us, get_recursive_path, float_to_percent, percent_to_float, track_id_to_path, us_to_ms, \
     time_millis
@@ -19,7 +23,7 @@ class MediaPlayer2:
         re.compile("https?://open.spotify.com/(?P<type>[a-z]*)/(?P<id>[a-zA-Z0-9]*)"),
     ]
 
-    def __init__(self, spotify, current_playback, device_id=None):
+    def __init__(self, spotify: Spotify, current_playback: Dict[str, Any], device_id: str = None):
         self.spotify = spotify
         self.device_id = device_id
         self.request_time = time_millis()
@@ -33,27 +37,27 @@ class MediaPlayer2:
         pass
 
     @property
-    def CanQuit(self):
+    def CanQuit(self) -> bool:
         return False
 
     @property
-    def CanRaise(self):
+    def CanRaise(self) -> bool:
         return False
 
     @property
-    def HasTrackList(self):
+    def HasTrackList(self) -> bool:
         return False  # Maybe in the future
 
     @property
-    def Identity(self):
+    def Identity(self) -> str:
         return self.current_playback["device"]["name"]
 
     @property
-    def SupportedUriSchemes(self):
+    def SupportedUriSchemes(self) -> List[str]:
         return ["spotify"]
 
     @property
-    def SupportedMimeTypes(self):
+    def SupportedMimeTypes(self) -> List[str]:
         return []
 
     def Next(self):
@@ -79,19 +83,19 @@ class MediaPlayer2:
             self.spotify.start_playback(device_id=self.device_id)
         else:
             if self.device_id is None:
-                device_id = self.spotify()["devices"][0]["id"]
+                device_id = self.spotify.devices()["devices"][0]["id"]
             else:
                 device_id = self.device_id
             self.spotify.transfer_playback(device_id=device_id, force_play=True)
 
-    def Seek(self, offset):
+    def Seek(self, offset: int):
         if self.current_playback["item"] is None:
             return
         position = self.current_playback["progress_ms"]
         new_position = max(position + us_to_ms(offset), 0)
         self.spotify.seek_track(new_position, device_id=self.device_id)
 
-    def SetPosition(self, track_id, position):
+    def SetPosition(self, track_id: str, position: int):
         if self.current_playback["item"] is None:
             return
         if track_id != track_id_to_path(self.current_playback["item"]["uri"]):
@@ -101,7 +105,7 @@ class MediaPlayer2:
             return
         self.spotify.seek_track(us_to_ms(position), device_id=self.device_id)
 
-    def OpenUri(self, uri):
+    def OpenUri(self, uri: str):
         uri = uri.strip()
         match = None
         for format_ in self.uriFormats:
@@ -125,7 +129,7 @@ class MediaPlayer2:
     Seeked = signal()
 
     @property
-    def PlaybackStatus(self):
+    def PlaybackStatus(self) -> str:
         if self.current_playback["item"] is None:
             return "Stopped"
         elif self.current_playback["is_playing"]:
@@ -134,7 +138,7 @@ class MediaPlayer2:
             return "Paused"
 
     @property
-    def LoopStatus(self):
+    def LoopStatus(self) -> str:
         status = self.current_playback["repeat_state"]
         if status == "off":
             return "None"
@@ -146,7 +150,7 @@ class MediaPlayer2:
             raise Exception(f"Unhandled case: Repeat state {status} returned by spotify api")
 
     @LoopStatus.setter
-    def LoopStatus(self, loopstatus):
+    def LoopStatus(self, loopstatus: str):
         if loopstatus == "None":
             status = "off"
         elif loopstatus == "Track":
@@ -160,24 +164,24 @@ class MediaPlayer2:
         self.spotify.repeat(status, device_id=self.device_id)
 
     @property
-    def Rate(self):
+    def Rate(self) -> float:
         return 1.0
 
     @Rate.setter
-    def Rate(self, rate):
+    def Rate(self, rate: float):
         if rate != 1.0:
             print("Gotten invalid rate from MPRIS2. Ignoring")
 
     @property
-    def Shuffle(self):
+    def Shuffle(self) -> bool:
         return self.current_playback["shuffle_state"]
 
     @Shuffle.setter
-    def Shuffle(self, shuffle):
+    def Shuffle(self, shuffle: bool):
         self.spotify.shuffle(shuffle, device_id=self.device_id)
 
     @property
-    def Metadata(self):
+    def Metadata(self) -> Dict[str, Variant]:
         if self.current_playback["item"] is None:
             return {"mpris:trackid": Variant('o', "/org/mpris/MediaPlayer2/TrackList/NoTrack")}
 
@@ -199,57 +203,57 @@ class MediaPlayer2:
         return metadata
 
     @property
-    def Volume(self):
+    def Volume(self) -> float:
         if self.current_playback["device"] is None:
             return 1.0
         return percent_to_float(self.current_playback["device"]["volume_percent"])
 
     @Volume.setter
-    def Volume(self, volume):
+    def Volume(self, volume: float):
         volume = max(min(volume, 1.0), 0.0)
         self.spotify.volume(float_to_percent(volume), device_id=self.device_id)
 
     @property
-    def Position(self):
+    def Position(self) -> int:
         if self.current_playback is None:
             return 0
         return ms_to_us(self.current_playback["progress_ms"])
 
     @property
-    def MinimumRate(self):
+    def MinimumRate(self) -> float:
         return 1.0
 
     @property
-    def MaximumRate(self):
+    def MaximumRate(self) -> float:
         return 1.0
 
     @property
-    def CanGoNext(self):
+    def CanGoNext(self) -> bool:
         return True
 
     @property
-    def CanGoPrevious(self):
+    def CanGoPrevious(self) -> bool:
         return True
 
     @property
-    def CanPlay(self):
+    def CanPlay(self) -> bool:
         return True
 
     @property
-    def CanPause(self):
+    def CanPause(self) -> bool:
         return True
 
     @property
-    def CanSeek(self):
+    def CanSeek(self) -> bool:
         return True
 
     @property
-    def CanControl(self):
+    def CanControl(self) -> bool:
         return True
 
     PropertiesChanged = signal()
 
-    def event_loop(self, current_playback):
+    def event_loop(self, current_playback: Dict[str, Any]):
         old_playback = self.current_playback
         self.current_playback = current_playback
         old_request_time = self.request_time

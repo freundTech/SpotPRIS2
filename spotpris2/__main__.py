@@ -1,5 +1,3 @@
-import sys
-
 from gi.repository import GLib
 from pydbus import SessionBus
 from spotipy import SpotifyOAuth, Spotify
@@ -7,7 +5,6 @@ from appdirs import AppDirs
 from configparser import ConfigParser
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-from .util import create_playback_state, new_session_bus
 from .BusManager import SingleBusManager, MultiBusManager
 from . import MediaPlayer2
 import pkg_resources

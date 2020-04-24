@@ -1,12 +1,16 @@
+from abc import ABCMeta, abstractmethod
+from typing import List
+
 from pydbus import SessionBus
+from pydbus.bus import Bus
+from spotipy import Spotify
 
 from .util import new_session_bus, create_playback_state
 from . import MediaPlayer2
-from abc import ABCMeta, abstractmethod
 
 
 class BusManager(metaclass=ABCMeta):
-    def __init__(self, spotify, app_name):
+    def __init__(self, spotify: Spotify, app_name: str):
         self.spotify = spotify
         self.app_name = app_name
 
@@ -16,7 +20,7 @@ class BusManager(metaclass=ABCMeta):
 
 
 class SingleBusManager(BusManager):
-    def __init__(self, spotify, bus=None, app_name="spotpris"):
+    def __init__(self, spotify: Spotify, bus: Bus = None, app_name: str = "spotpris"):
         super().__init__(spotify, app_name)
         self.registration = None
         if bus is None:
@@ -44,7 +48,8 @@ class SingleBusManager(BusManager):
 
 
 class MultiBusManager(BusManager):
-    def __init__(self, spotify, allowed_devices=None, ignored_devices=None, app_name="spotpris"):
+    def __init__(self, spotify: Spotify, allowed_devices: List[str] = None, ignored_devices: List[str] = None,
+                 app_name: str = "spotpris"):
         super().__init__(spotify, app_name)
         self.allowed_devices = allowed_devices
         self.ignored_devices = ignored_devices
