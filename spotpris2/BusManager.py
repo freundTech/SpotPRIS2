@@ -79,7 +79,7 @@ class MultiBusManager(BusManager):
 
     def _remove_device(self, device_id):
         player_info = self.current_devices[device_id]
-        player_info.registration.unpublish()
+        player_info.publication.unpublish()
         player_info.bus.con.close()
         del self.current_devices[device_id]
 
