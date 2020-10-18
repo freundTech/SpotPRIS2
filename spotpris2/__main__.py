@@ -70,8 +70,12 @@ def main():
             manager = SingleBusManager(sp)
 
     def timeout_handler():
-        manager.main_loop()
-        return True
+        try:
+            manager.main_loop()
+        except Exception as e:
+            print(e)
+        finally:
+            return True
 
     GLib.timeout_add_seconds(1, timeout_handler)
 
