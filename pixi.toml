@@ -1,0 +1,15 @@
+[project]
+authors = ["Adrian Freund <adrian@freund.io>"]
+channels = ["conda-forge"]
+description = "Add a short description here"
+name = "spotpris2"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+rust = ">=1.84.0,<1.85"
+openssl = ">=3.4.1,<4"
+c-compiler = ">=1.9.0,<2"
+pkg-config = ">=0.29.2,<0.30"

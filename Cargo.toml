@@ -1,0 +1,16 @@
+[package]
+name = "spotpris2"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = "0.8.1"
+dirs = "6.0.0"
+serde = "1.0.217"
+spotify-rs = "0.3.14"
+tokio = { version = "1.43.0", features = ["full"] }
+toml = "0.8.20"
+webbrowser = "1.0.3"
+zbus = { version = "5.5.0", features = ["tokio"] }
