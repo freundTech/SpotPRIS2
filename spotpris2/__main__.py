@@ -7,9 +7,12 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from .BusManager import SingleBusManager, MultiBusManager
 from . import MediaPlayer2
+from .const import REDIRECT_PORT, REDIRECT_HOST
 import pkg_resources
 import webbrowser
 import argparse
+
+PORT = REDIRECT_PORT
 
 ifaces = ["org.mpris.MediaPlayer2",
           "org.mpris.MediaPlayer2.Player"]  # , "org.mpris.MediaPlayer2.Playlists", "org.mpris.MediaPlayer2.TrackList"]
@@ -28,20 +31,30 @@ def main():
     parser.add_argument('-s', '--steal-bus', action="store_true", help="Steal the dbus bus name from spotify to prevent "
                         "it from also offering an MPRIS2 interface. If --auto is used use the spotify bus name as own "
                         "bus name (experimental)")
+    parser.add_argument("--print-auth-dir", action="store_true", help="Print the spotify credential dir")
+    parser.add_argument('-p', '--port', nargs='?', metavar="PORT", type=int, help="port to run the local HTTP server on")
     args = parser.parse_args()
+    if args.print_auth_dir:
+        print(f"spotify credentials dir: {dirs.user_cache_dir}")
+        exit(0)
+    if args.port is not None:
+        global PORT
+        PORT = args.port
 
     MediaPlayer2.dbus = [pkg_resources.resource_string(__name__, f"mpris/{iface}.xml").decode('utf-8') for iface in
                          ifaces]
 
     loop = GLib.MainLoop()
-
     oauth = authenticate()
     sp = Spotify(oauth_manager=oauth)
 
     if args.list:
         devices = sp.devices()
-        for devices in devices["devices"]:
-            print(devices[args.list])
+        if not devices:
+            print("No devices found, is a spotify client open?")
+        else:
+            for devices in devices["devices"]:
+                print(devices[args.list])
         return
 
     exclusive_count = 0
@@ -97,11 +110,11 @@ def authenticate():
             RequestHandler.callbackUri = self.path
 
     config = get_config()
-
+    print(f"spotify redirect uri: http://{REDIRECT_HOST}:{PORT}")
     oauth = SpotifyOAuth(
         client_id=config["client_id"],
         client_secret=config["client_secret"],
-        redirect_uri="http://localhost:8000",
+        redirect_uri=f"http://{REDIRECT_HOST}:{PORT}",
         scope=scope,
         cache_path=dirs.user_cache_dir,
     )
@@ -111,8 +124,8 @@ def authenticate():
     if not token_info:
         url = oauth.get_authorize_url()
         webbrowser.open(url)
-
-        server = HTTPServer(('', 8000), RequestHandler)
+        print(f"starting HTTP server on port {REDIRECT_PORT}")
+        server = HTTPServer(('', PORT), RequestHandler)
         server.handle_request()
 
         code = oauth.parse_response_code(RequestHandler.callbackUri)
@@ -129,7 +142,7 @@ def get_config():
     if section.get("client_id") is None or section.get("client_secret") is None:
         print("To use this software you need to provide your own spotify developer credentials. Go to "
               "https://developer.spotify.com/dashboard/applications, create a new client id and add "
-              "http://localhost:8000 to the redirect URIs.")
+              f"http://{REDIRECT_HOST}:{REDIRECT_PORT} to the redirect URIs.")
         section["client_id"] = input("Enter client id: ")
         section["client_secret"] = input("Enter client secret: ")
         with open(f"{dirs.user_config_dir}.cfg", 'w+') as f:
